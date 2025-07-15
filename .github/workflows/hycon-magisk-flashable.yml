@@ -13,13 +13,18 @@ jobs:
       - name: 📦 Install required tools
         run: |
           sudo apt update
-          sudo apt install -y curl zip
+          sudo apt install -y curl xz-utils zip
 
-      - name: ⬇️ Download GSI Image
+      - name: ⬇️ Download GSI .img.xz
         run: |
           mkdir gsi
           cd gsi
-          curl -L -o system.img "https://github.com/ChonDoit/treble_hycon_patches/releases/download/Roar/LineageOS-21-20240607-UNOFFICIAL-arm64_bvS-vanilla_EROSF.img"
+          curl -L -o hycon.img.xz "https://github.com/ChonDoit/treble_hycon_patches/releases/download/Roar/HyconOS_v313-arm64-bgS-slim_20230104.img.xz"
+
+      - name: 🧯 Extract .img from .xz
+        run: |
+          cd gsi
+          unxz hycon.img.xz  # Output will be hycon.img
 
       - name: ⬇️ Download Magisk v31.0
         run: |
@@ -30,31 +35,32 @@ jobs:
       - name: 🏗️ Build flashable ZIP structure
         run: |
           mkdir -p flashable/META-INF/com/google/android
-          cp gsi/system.img flashable/system.img
+          cp gsi/hycon.img flashable/system.img
           cp magisk/magisk.apk flashable/magisk.apk
 
           # Create dummy updater-script
-          echo 'ui_print("Flashing GSI...");' > flashable/META-INF/com/google/android/updater-script
+          echo 'ui_print("Flashing Hycon GSI...");' > flashable/META-INF/com/google/android/updater-script
           echo 'package_extract_file("system.img", "/dev/block/bootdevice/by-name/system");' >> flashable/META-INF/com/google/android/updater-script
-          echo 'ui_print("GSI Flash complete.");' >> flashable/META-INF/com/google/android/updater-script
+          echo 'ui_print("Flash complete.");' >> flashable/META-INF/com/google/android/updater-script
 
       - name: 📦 Zip the flashable package
         run: |
           cd flashable
-          zip -r ../hycon-gsi-magisk-flashable.zip .
+          zip -r ../hycon-magisk-flashable.zip .
 
       - name: 🚀 Upload to New GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: hycon-gsi-magisk-${{ github.run_id }}
+          tag_name: hycon-magisk-${{ github.run_id }}
           name: Hycon Flashable GSI + Magisk v31.0
           body: |
-            Flashable Hycon GSI with Magisk v31.0
-            Built from: https://github.com/ChonDoit/treble_hycon_patches/releases/tag/Roar
-          files: hycon-gsi-magisk-flashable.zip
+            ✅ Flashable Hycon GSI with Magisk v31.0
+            🏗️ Base GSI: HyconOS v313 (from Roar release)
+            📦 Includes system.img and magisk.apk
+          files: hycon-magisk-flashable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🧹 Clean up
-        run: rm -rf gsi magisk flashable hycon-gsi-magisk-flashable.zip
+        run: rm -rf gsi magisk flashable hycon-magisk-flashable.zip
         
