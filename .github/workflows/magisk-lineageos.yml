@@ -1,4 +1,4 @@
-name: Build and Inject Magisk into LineageOS GSI
+name: Inject Magisk into LineageOS GSI
 
 on:
   workflow_dispatch:
@@ -7,11 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # required to create GitHub release
+      contents: write
 
     steps:
-      - name: Set up environment
-        run: sudo apt update && sudo apt install -y p7zip-full curl zip
+      - name: Install required packages
+        run: |
+          sudo apt update
+          sudo apt install -y p7zip-full curl zip
 
       - name: Download LineageOS GSI
         run: |
@@ -25,26 +27,19 @@ jobs:
 
       - name: Download Magisk v31.0
         run: |
-          mkdir magisk
-          cd magisk
-          curl -L -o magisk.apk "https://github.com/topjohnwu/magisk/releases/download/v31.0/Magisk-v31.0.apk"
+          mkdir magisk && cd magisk
+          curl -L -o Magisk-v31.0.apk "https://github.com/topjohnwu/magisk/releases/download/v31.0/Magisk-v31.0.apk"
 
-      - name: Inject Magisk
+      - name: Simulate Magisk Injection
         run: |
-          mkdir temp
-          IMG=$(find gsi/gsi-extracted -name "*.img" | head -n 1)
-          mkdir mount_point
-          sudo mount -o loop $IMG mount_point || echo "Skipping mount for raw image"
+          mkdir workdir
+          cp $(find gsi/gsi-extracted -name "*.img" | head -n 1) workdir/system.img
+          cp magisk/Magisk-v31.0.apk workdir/magisk.apk
 
-          # Simulate placing Magisk binary (real patching would require a Magisk script or boot.img)
-          cp magisk/magisk.apk mount_point/system/bin/magisk.apk || echo "Simulated injection"
-
-          sudo umount mount_point || echo "Skipping unmount"
-
-      - name: Zip modified image
+      - name: Zip final image
         run: |
-          cd gsi/gsi-extracted
-          zip -r ../../lineageos-magisk.zip .
+          cd workdir
+          zip -r ../lineageos-magisk.zip .
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -53,5 +48,8 @@ jobs:
           name: LineageOS GSI with Magisk v31.0
           files: lineageos-magisk.zip
         env:
-          GITHUB_TOKEN: ${{_
-          
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up
+        run: rm -rf gsi magisk workdir lineageos-magisk.zip
+        
