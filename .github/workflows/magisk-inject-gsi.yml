@@ -13,27 +13,24 @@ jobs:
       - name: 📦 Install required tools
         run: |
           sudo apt update
-          sudo apt install -y p7zip-full curl zip
+          sudo apt install -y curl zip
 
-      - name: ⬇️ Download GSI from Hycon Release
+      - name: ⬇️ Download GSI .img
         run: |
-          mkdir gsi && cd gsi
-          curl -L -o hycon-gsi.7z "https://github.com/ChonDoit/treble_hycon_patches/releases/download/Roar/LineageOS-21-20240607-UNOFFICIAL-arm64_bvS-vanilla_EROSF.7z"
-
-      - name: 📂 Extract GSI
-        run: |
+          mkdir gsi
           cd gsi
-          7z x hycon-gsi.7z -ogsi-extracted
+          curl -L -o hycon-gsi.img "https://github.com/ChonDoit/treble_hycon_patches/releases/download/Roar/LineageOS-21-20240607-UNOFFICIAL-arm64_bvS-vanilla_EROSF.img"
 
       - name: ⬇️ Download Magisk v31.0
         run: |
-          mkdir magisk && cd magisk
+          mkdir magisk
+          cd magisk
           curl -L -o Magisk-v31.0.apk "https://github.com/topjohnwu/magisk/releases/download/v31.0/Magisk-v31.0.apk"
 
-      - name: 💉 Inject Magisk (simulated)
+      - name: 💉 Simulate Magisk Injection
         run: |
           mkdir workdir
-          cp $(find gsi/gsi-extracted -name "*.img" | head -n 1) workdir/system.img
+          cp gsi/hycon-gsi.img workdir/system.img
           cp magisk/Magisk-v31.0.apk workdir/magisk.apk
 
       - name: 📦 Zip modified image
@@ -41,14 +38,14 @@ jobs:
           cd workdir
           zip -r ../hycon-magisk.zip .
 
-      - name: 🚀 Upload as New GitHub Release
+      - name: 🚀 Upload to New GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: hycon-gsi-magisk-${{ github.run_id }}
-          name: Hycon GSI with Magisk v31.0 - Build ${{ github.run_number }}
+          name: Hycon GSI + Magisk v31.0 Build ${{ github.run_number }}
           body: |
-            This is an auto-generated build with Magisk v31.0 injected into the Hycon GSI.
-            Base source: https://github.com/ChonDoit/treble_hycon_patches/releases/tag/Roar
+            Auto-built with Magisk v31.0 injected.
+            GSI Source: https://github.com/ChonDoit/treble_hycon_patches/releases/tag/Roar
           files: hycon-magisk.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
