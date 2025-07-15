@@ -1,4 +1,4 @@
-name: Create Flashable Hycon GSI with Magisk
+name: Create Flashable GSI for M305F (Magisk v31.0)
 
 on:
   workflow_dispatch:
@@ -15,16 +15,16 @@ jobs:
           sudo apt update
           sudo apt install -y curl xz-utils zip
 
-      - name: ⬇️ Download GSI .img.xz
+      - name: ⬇️ Download Hycon GSI (.img.xz)
         run: |
           mkdir gsi
           cd gsi
           curl -L -o hycon.img.xz "https://github.com/ChonDoit/treble_hycon_patches/releases/download/Roar/HyconOS_v313-arm64-bgS-slim_20230104.img.xz"
 
-      - name: 🧯 Extract .img from .xz
+      - name: 🧯 Extract GSI image
         run: |
           cd gsi
-          unxz hycon.img.xz  # Output will be hycon.img
+          unxz hycon.img.xz  # Output: hycon.img
 
       - name: ⬇️ Download Magisk v31.0
         run: |
@@ -32,35 +32,41 @@ jobs:
           cd magisk
           curl -L -o magisk.apk "https://github.com/topjohnwu/magisk/releases/download/v31.0/Magisk-v31.0.apk"
 
-      - name: 🏗️ Build flashable ZIP structure
+      - name: 🏗️ Create flashable structure
         run: |
           mkdir -p flashable/META-INF/com/google/android
           cp gsi/hycon.img flashable/system.img
           cp magisk/magisk.apk flashable/magisk.apk
 
-          # Create dummy updater-script
-          echo 'ui_print("Flashing Hycon GSI...");' > flashable/META-INF/com/google/android/updater-script
-          echo 'package_extract_file("system.img", "/dev/block/bootdevice/by-name/system");' >> flashable/META-INF/com/google/android/updater-script
-          echo 'ui_print("Flash complete.");' >> flashable/META-INF/com/google/android/updater-script
+          cat <<EOF > flashable/META-INF/com/google/android/updater-script
+ui_print("Mounting system...");
+run_program("/sbin/mount", "/system");
+ui_print("Wiping system...");
+delete_recursive("/system");
+ui_print("Flashing GSI image to /dev/block/by-name/system");
+package_extract_file("system.img", "/dev/block/by-name/system");
+ui_print("Installing Magisk apk (optional)...");
+ui_print("Done. Reboot and install magisk.apk from /sdcard.");
+EOF
 
       - name: 📦 Zip the flashable package
         run: |
           cd flashable
-          zip -r ../hycon-magisk-flashable.zip .
+          zip -r ../hycon-gsi-m305f-flashable.zip .
 
-      - name: 🚀 Upload to New GitHub Release
+      - name: 🚀 Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: hycon-magisk-${{ github.run_id }}
-          name: Hycon Flashable GSI + Magisk v31.0
+          tag_name: hycon-gsi-magisk-${{ github.run_id }}
+          name: Hycon Flashable GSI for M305F + Magisk
           body: |
-            ✅ Flashable Hycon GSI with Magisk v31.0
-            🏗️ Base GSI: HyconOS v313 (from Roar release)
-            📦 Includes system.img and magisk.apk
-          files: hycon-magisk-flashable.zip
+            ✅ Flashable HyconOS v313 for Galaxy M30 (M305F)
+            📦 Includes system.img + magisk.apk
+            🛠 Flashable via TWRP (A-only)
+            💡 Flash zip, reboot, and install Magisk manually
+          files: hycon-gsi-m305f-flashable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🧹 Clean up
-        run: rm -rf gsi magisk flashable hycon-magisk-flashable.zip
-        
+        run: rm -rf gsi magisk flashable hycon-gsi-m305f-flashable.zip
