@@ -13,7 +13,7 @@ jobs:
 
     - name: ⬇️ Download LineageOS GSI
       run: |
-        wget -O lineage-gsi.7z "https://your-link-to-lineageos.7z"
+        wget -O lineage-gsi.7z "https://sourceforge.net/projects/misterztr-gsi/files/LineageOS/Android%2015/LineageOS-22.2-20250509-GAPPS-EROFS-GSI.7z/downlo"
 
     - name: 📦 Extract GSI
       run: |
