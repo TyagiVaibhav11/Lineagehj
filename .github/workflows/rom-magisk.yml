@@ -1,0 +1,57 @@
+name: Build and Inject Magisk into LineageOS GSI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📁 Checkout repository
+      uses: actions/checkout@v3
+
+    - name: 📥 Download LineageOS GSI
+      run: |
+        wget -O lineage-gsi.7z "https://sourceforge.net/projects/misterztr-gsi/files/LineageOS/Android%2015/LineageOS-22.2-20250509-GAPPS-EROFS-GSI.7z/download"
+
+    - name: 📦 Extract GSI
+      run: |
+        sudo apt update && sudo apt install -y p7zip-full
+        7z x lineage-gsi.7z -olineage-gsi
+
+    - name: ⬇️ Download latest Magisk
+      run: |
+        mkdir magisk
+        wget https://github.com/topjohnwu/Magisk/releases/latest/download/Magisk-v31.0.apk -O magisk/magisk.apk
+        unzip magisk/magisk.apk -d magisk/files
+
+    - name: 🧪 Inject Magisk (by placing binaries inside system/bin)
+      run: |
+        sudo apt install -y fuse3 libfuse2 e2fsprogs
+        mkdir gsi_mount
+        sudo modprobe loop
+        sudo mount -o loop lineage-gsi/*.img gsi_mount || echo "Mount failed — skipping"
+        if [ -d "gsi_mount/system/bin" ]; then
+          sudo cp magisk/files/lib/armeabi-v7a/magisk32 gsi_mount/system/bin/magisk
+          sudo cp magisk/files/lib/arm64-v8a/magisk64 gsi_mount/system/bin/magisk64
+          echo "Magisk binaries copied."
+          sudo umount gsi_mount
+        else
+          echo "Couldn't find /system/bin — mount might have failed or EROFS used"
+        fi
+
+    - name: 📦 Zip modified image
+      run: |
+        cd lineage-gsi
+        zip -r9 LineageOS22.2-Magisk-GSI.zip *.img
+
+    - name: 🚀 Upload to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: lineageos-magisk-22.2
+        name: LineageOS 22.2 with Magisk
+        files: lineage-gsi/LineageOS22.2-Magisk-GSI.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
