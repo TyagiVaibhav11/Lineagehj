@@ -23,7 +23,7 @@ jobs:
     - name: ⬇️ Download latest Magisk
       run: |
         mkdir magisk
-        wget https://github.com/topjohnwu/Magisk/releases/latest/download/Magisk-v31.0.apk -O magisk/magisk.apk
+        wget https://github.com/topjohnwu/Magisk/releases/latest/download/Magisk-v27.0.apk -O magisk/magisk.apk
         unzip magisk/magisk.apk -d magisk/files
 
     - name: 🧪 Inject Magisk (by placing binaries inside system/bin)
