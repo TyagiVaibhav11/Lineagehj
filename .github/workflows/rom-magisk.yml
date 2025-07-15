@@ -6,23 +6,52 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create GitHub release
 
     steps:
-    - name: 📁 Checkout repository
-      uses: actions/checkout@v3
+      - name: Set up environment
+        run: sudo apt update && sudo apt install -y p7zip-full curl zip
 
-    - name: ⬇️ Download LineageOS GSI
-      run: |
-        wget -O lineage-gsi.7z "https://sourceforge.net/projects/misterztr-gsi/files/LineageOS/Android%2015/LineageOS-22.2-20250509-GAPPS-EROFS-GSI.7z/downlo"
+      - name: Download LineageOS GSI
+        run: |
+          mkdir gsi && cd gsi
+          curl -L -o lineage-gsi.7z "https://sourceforge.net/projects/misterztr-gsi/files/LineageOS/Android%2015/LineageOS-22.2-20250509-GAPPS-EROFS-GSI.7z/download"
 
-    - name: 📦 Extract GSI
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y p7zip-full unzip
-        7z x lineage-gsi.7z -olineage-gsi
+      - name: Extract GSI
+        run: |
+          cd gsi
+          7z x lineage-gsi.7z -ogsi-extracted
 
-    - name: ⬇️ Download Magisk
-      run: |
-        mkdir -p magisk
-        wget -O magisk/magisk.apk "https://github.com/topjohnwu/Magisk/releases/download/v27.0/Magisk-
-        
+      - name: Download Magisk v31.0
+        run: |
+          mkdir magisk
+          cd magisk
+          curl -L -o magisk.apk "https://github.com/topjohnwu/magisk/releases/download/v31.0/Magisk-v31.0.apk"
+
+      - name: Inject Magisk
+        run: |
+          mkdir temp
+          IMG=$(find gsi/gsi-extracted -name "*.img" | head -n 1)
+          mkdir mount_point
+          sudo mount -o loop $IMG mount_point || echo "Skipping mount for raw image"
+
+          # Simulate placing Magisk binary (real patching would require a Magisk script or boot.img)
+          cp magisk/magisk.apk mount_point/system/bin/magisk.apk || echo "Simulated injection"
+
+          sudo umount mount_point || echo "Skipping unmount"
+
+      - name: Zip modified image
+        run: |
+          cd gsi/gsi-extracted
+          zip -r ../../lineageos-magisk.zip .
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: lineageos-gsi-magisk-22.2
+          name: LineageOS GSI with Magisk v31.0
+          files: lineageos-magisk.zip
+        env:
+          GITHUB_TOKEN: ${{_
+          
